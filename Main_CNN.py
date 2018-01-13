@@ -14,7 +14,7 @@ x = tf.placeholder("float", [None, 784])
 y = tf.placeholder("float", [None, 10])
 
 '''
-权重函数
+权重函数，也就是卷积核
 制造噪音：truncated_normal 从正态分布中输出随机数值
 指定标准差：tddev=0.1
 指定输出张量的形状：shape
@@ -40,12 +40,14 @@ def max_pool_2x2(x):
 
 
 # 把图片变成4维向量，28*28，1通道（灰度图），适应第一层
+# [批次，宽，高，通道数]
 x_image = tf.reshape(x, [-1, 28, 28, 1])
 
 '''
-第一层卷积 5*5 1通道->32通道，每个输出通道对应一个偏置量
+第一层
 图片尺寸缩小到 14*14
 '''
+# 5*5，1个图像通道，32个卷积核 ，对应32个偏置量
 weight_conv1 = weight_variable([5, 5, 1, 32], dtype="float", name='weight_conv1')
 bias_conv1 = bias_variable([32], dtype="float", name='bias_conv1')
 # 把x_image和权值向量进行卷积，加上偏置项，应用 ReLU神经元 激活卷积函数
@@ -54,9 +56,10 @@ hidden_conv1 = tf.nn.relu(conv2d(x_image, weight_conv1) + bias_conv1)
 hidden_pool1 = max_pool_2x2(hidden_conv1)
 
 '''
-第二层卷积 5*5 32->64
+第二层卷积
 图片尺寸缩小到 7*7
 '''
+# 5*5，32个图像通道，64个卷积核，对应64个偏置量
 weight_conv2 = weight_variable([5, 5, 32, 64], dtype="float", name='weight_conv2')
 bias_conv2 = bias_variable([64], dtype="float", name='bias_conv2')
 hidden_conv2 = tf.nn.relu(conv2d(hidden_pool1, weight_conv2) + bias_conv2)
@@ -134,8 +137,8 @@ def restore():
 
 
 # 获取测试图片一维数组，tensorflow 的图片是一维数组，每一位代表像素深度
-def getTestPicArray(filename):
-    im = Image.open(filename)
+def getTestPicArray(file_dir):
+    im = Image.open(file_dir)
     print(im.show())
     x_s = 28
     y_s = 28
@@ -143,34 +146,7 @@ def getTestPicArray(filename):
 
     im_arr = np.array(out.convert('L'))
 
-    # 标准化图片深度
-    num0 = 0
-    num255 = 0
-    # 阈值
-    threshold = 100
-
-    for x in range(x_s):
-        for y in range(y_s):
-            if im_arr[x][y] > threshold:
-                num255 = num255 + 1
-            else:
-                num0 = num0 + 1
-
-    if (num255 > num0):
-        # 颜色比较深
-        print("convert!")
-        for x in range(x_s):
-            for y in range(y_s):
-                im_arr[x][y] = 255 - im_arr[x][y]
-                if (im_arr[x][y] < threshold):
-                    im_arr[x][y] = 0
-                # if(im_arr[x][y] > threshold) : im_arr[x][y] = 0
-                # else : im_arr[x][y] = 255
-                # if(im_arr[x][y] < threshold): im_arr[x][y] = im_arr[x][y] - im_arr[x][y] / 2
-
-    # out = Image.fromarray(np.uint8(im_arr))
-    # out.save(filename.split('/')[0] + '/28pix/' + filename.split('/')[1])
-    # print im_arr
+    print(im_arr)
 
     # 转换成一维向量
     nm = im_arr.reshape((1, 784))
@@ -186,7 +162,7 @@ def getTestPicArray(filename):
 def useMyPicture():
     testNum = input("input the number of test picture:")
     for i in range(int(testNum)):
-        single_Img = getTestPicArray(r'E:\OneDrive\workplace\Python\MyTest\MY_data\2.1.png')
+        single_Img = getTestPicArray(r'MY_data\6.1.png')
         ans = tf.argmax(y_fc2, 1)
         print("The prediction answer is:\n %d" % ans.eval(feed_dict={x: single_Img, keep_prob: 1}))
 
