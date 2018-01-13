@@ -18,3 +18,7 @@ by：爱斌AI实验室
 ## GitHub 教程：
 
 [如何同步 Github fork 出来的分支](https://jinlong.github.io/2015/10/12/syncing-a-fork/)
+
+
+## Python
+[Python 命名规范](https://www.jianshu.com/p/50b813dd6fbe)
