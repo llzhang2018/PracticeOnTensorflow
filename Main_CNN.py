@@ -109,7 +109,7 @@ session.run(init)
 
 # 使用 MNIST 数据集 训练+测试
 def train():
-    for i in range(10000):
+    for i in range(20000):
         # 每个批次50个数据
         batch = mnist.train.next_batch(50)
         train_step.run(feed_dict={x: batch[0], y: batch[1], keep_prob: 0.5})
@@ -126,15 +126,12 @@ def train():
 # 保存训练模型参数
 def save():
     saver = tf.train.Saver()
-
     saver.save(session, save_path)
-
 
 # 恢复模型参数
 def restore():
     saver = tf.train.Saver()
     saver.restore(session, save_path)
-
 
 # 获取测试图片一维数组，tensorflow 的图片是一维数组，每一位代表像素深度
 def getTestPicArray(file_dir):
@@ -162,7 +159,7 @@ def getTestPicArray(file_dir):
 def useMyPicture():
     testNum = input("input the number of test picture:")
     for i in range(int(testNum)):
-        single_Img = getTestPicArray(r'MY_data\6.1.png')
+        single_Img = getTestPicArray(r'MY_data\1.1.png')
         ans = tf.argmax(y_fc2, 1)
         print("The prediction answer is:\n %d" % ans.eval(feed_dict={x: single_Img, keep_prob: 1}))
 
