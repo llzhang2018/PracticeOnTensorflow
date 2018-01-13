@@ -164,21 +164,18 @@ def getTestPicArray(file_dir):
 def useMyPicture():
     testNum = input("input the number of test picture:")
     for i in range(int(testNum)):
-<<<<<<< HEAD:main_cnn.py
         single_Img = getTestPicArray(r'MY_data\1.1.png')
-=======
-        single_Img = getTestPicArray(r'MY_data\2.1.png')
->>>>>>> fd796d3670b8ec318cf3fb5d355ddb6833f714ce:Main_CNN.py
+
         ans = tf.argmax(y_fc2, 1)
         print("The prediction answer is:\n %d" % ans.eval(feed_dict={x: single_Img, keep_prob: 1}))
 
 save_path = "model_save/cnn.ckpt"
 
 # 运行
-train()
-save()
+# train()
+# save()
 
 restore()
 
-#useMyPicture()
+useMyPicture()
 session.close()
