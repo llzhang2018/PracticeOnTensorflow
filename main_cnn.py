@@ -136,13 +136,18 @@ def restore():
 # 获取测试图片一维数组，tensorflow 的图片是一维数组，每一位代表像素深度
 def getTestPicArray(file_dir):
     im = Image.open(file_dir)
+    # 预览图片
     print(im.show())
+
+    # 剪切固定大小
     x_s = 28
     y_s = 28
     out = im.resize((x_s, y_s), Image.ANTIALIAS)
 
+    # 从tensor 对象转换为 python 数组
     im_arr = np.array(out.convert('L'))
 
+    # 打印矩阵
     print(im_arr)
 
     # 转换成一维向量
