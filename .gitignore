@@ -1,2 +1,7 @@
 
-.idea/workspace.xml
+.idea/
+.MNIST_data
+.model_save
+
+
+*.ini
