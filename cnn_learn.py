@@ -3,13 +3,13 @@ import numpy as np
 import tensorflow as tf
 
 def get_files(filename):
-    class_train = []
-    label_train = []
+    class_list = []
+    label_list = []
     for train_class in os.listdir(filename):
         for pic in os.listdir(filename + train_class):
-            class_train.append(filename + train_class+'/'+pic)
-            label_train.append(train_class)
-    temp = np.array([class_train, label_train])
+            class_list.append(filename + train_class+'/'+pic)
+            label_list.append(train_class)
+    temp = np.array([class_list, label_list])
     temp = temp.transpose()
     # shuffle the samples
     np.random.shuffle(temp)
