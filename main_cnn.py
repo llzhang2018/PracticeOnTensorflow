@@ -144,7 +144,7 @@ def getTestPicArray(file_dir):
     y_s = 28
     img = im.resize((x_s, y_s), Image.ANTIALIAS)
 
-    # 转换为灰度图
+    #
     gray_img = img.convert('L')
 
     # 从tensor 对象转换为 python 数组
