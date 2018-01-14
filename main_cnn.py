@@ -142,10 +142,13 @@ def getTestPicArray(file_dir):
     # 剪切固定大小
     x_s = 28
     y_s = 28
-    out = im.resize((x_s, y_s), Image.ANTIALIAS)
+    img = im.resize((x_s, y_s), Image.ANTIALIAS)
+
+    # 转换为灰度图
+    gray_img = img.convert('L')
 
     # 从tensor 对象转换为 python 数组
-    im_arr = np.array(out.convert('L'))
+    im_arr = np.array(gray_img)
 
     # 打印矩阵
     print(im_arr)
