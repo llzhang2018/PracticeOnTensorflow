@@ -1,7 +1,9 @@
 import os
 import numpy as np
 import tensorflow as tf
+import input_data
 
+session = tf.InteractiveSession()
 
 def weight_variable(shape, dtype):
     """
@@ -21,6 +23,7 @@ def bias_variable(shape, dtype):
 # 定义权值 shape
 weights = {
     "w_conv1": weight_variable([5, 5, 3, 32], dtype="float"),
+    "w_conv1_mnist": weight_variable([5, 5, 1, 32], dtype="float"),
     "w_conv2": weight_variable([5, 5, 32, 64], dtype="float"),
     "w_fc1": weight_variable([7 * 7 * 64, 1024], dtype="float"),
     "w_fc2": weight_variable([1024, 10], dtype="float")
@@ -53,10 +56,14 @@ def norm(x, lsize=4):
     return tf.nn.lrn(x, depth_radius=lsize, bias=1, alpha=0.001/9.0, beta=0.75)
 
 
-# cnn 模型
-def cnn_model(images):
+def cnn_model(images, keep_prob, first_w):
+    """
+    卷积神经网络模型
+    :param images: 训练用的图片
+    :return: a tensor  of shape [batch_size, NUM_CLASSES]
+    """
     # 第一层
-    hidden_conv1 = conv2d(images, weights["w_conv1"], biases["b_conv1"])
+    hidden_conv1 = conv2d(images, weights[first_w], biases["b_conv1"])
     hidden_pool1 = pooling(hidden_conv1)
     # hidden_norm1 = norm(hidden_pool1)
 
@@ -69,7 +76,7 @@ def cnn_model(images):
     hidden_pool2_flat = tf.reshape(hidden_pool2, [-1, weights["w_fc1"].get_shape().as_list()[0]])
     hidden_fc1 = tf.nn.relu(tf.matmul(hidden_pool2_flat, weights["w_fc1"])+biases["b_fc1"])
     # 使用 Dropout 优化方法：用一个伯努利序列(0,1随机分布) * 神经元，随机选择每一次迭代的神经元
-    hidden_fc1_dropout = tf.nn.dropout(hidden_fc1, 0.5)
+    hidden_fc1_dropout = tf.nn.dropout(hidden_fc1, keep_prob=keep_prob)
 
     # 输出层，没有做 softmax 回归
     logits = tf.add(tf.matmul(hidden_fc1_dropout, weights["w_fc2"]), biases["b_fc2"])
@@ -79,14 +86,14 @@ def cnn_model(images):
 def get_loss(logits, labels):
     """
     损失函数，包含输出层的 softmax 回归
-    :param logits:
-    :param labels:
-    :return: loss
+    :param logits: a tensor  of shape [batch_size, NUM_CLASSES]
+    :param labels: a tensor of shape [batch_size]
+    :return: loss 浮点数
     """
     '''
     sparse_softmax_cross_entropy_with_logits 函数执行了三个计算步骤：
     softmax 回归
-    sparse_to_dense 简单说就是把标签变成适用于神经网络输出的形式，也就 batchsize 的 onehot 行向量
+    sparse_to_dense 简单说就是把标签变成适用于神经网络输出的形式，也就 batchsize 个的 onehot 行向量
     cross_entropy 交叉熵
     前往 https://www.jianshu.com/p/fb119d0ff6a6 深入了解
     '''
@@ -97,7 +104,12 @@ def get_loss(logits, labels):
 
 # 计算识别精度
 def get_accuracy(logits, labels):
-    #
+    """
+    :param logits: a tensor  of shape [batch_size, NUM_CLASSES]
+    :param labels: a tensor of shape [batch_size]
+    :return: acc 浮点数
+    """
+    # http://blog.csdn.net/ib_h20/article/details/72782581
     acc = tf.nn.in_top_k(logits, labels, 1)
     acc = tf.cast(acc, tf.float32)
     acc = tf.reduce_mean(acc)
@@ -105,42 +117,65 @@ def get_accuracy(logits, labels):
 
 
 # 训练
-def training(loss, lr):
-    train_ops = tf.train.RMSPropOptimizer(lr, 0.9).minimize(loss)
-    return train_ops
+def training(loss):
+    train_step = tf.train.AdamOptimizer(1e-4).minimize(loss)
+    return train_step
 
 
-def run_training():
+def run_training_with_my_data(setp_num, keep_prob):
+
     file_dir = 'local_data/'
     image, label = get_files(file_dir)
-    image_batches, label_batches = get_batches(image, label, 28, 28, 10, 20)
+    image_batches, label_batches = get_batches(image, label,
+                                               resize_w=28, resize_h=28, batch_size=10, capacity=20)
 
-    logits = cnn_model(image_batches)
+    logits = cnn_model(image_batches, keep_prob=keep_prob, first_w="w_conv1")
     loss = get_loss(logits, label_batches)
 
-    train_ops = training(loss, 0.001)
+    train_step = training(loss)
     acc = get_accuracy(logits, label_batches)
 
-    sess = tf.Session()
-    init = tf.global_variables_initializer()
-    sess.run(init)
-
     coord = tf.train.Coordinator()
-    threads = tf.train.start_queue_runners(sess=sess, coord=coord)
+    threads = tf.train.start_queue_runners(sess=session, coord=coord)
 
     try:
-        for step in np.arange(2):
+        for step in np.arange(setp_num):
             print("run_training: step %d" % step)
             if coord.should_stop():
                 break
-            _, train_acc, train_loss = sess.run([train_ops, acc, loss])
+            _, train_acc, train_loss = session.run([train_step, acc, loss])
             print("loss:{} , accuracy:{}".format(train_loss, train_acc))
     except tf.errors.OutOfRangeError:
         print("Done!!!")
     finally:
         coord.request_stop()
     coord.join(threads)
-    sess.close()
+    session.close()
+
+
+def run_training_with_mnist(keep_prob):
+    # mnist 数据集
+    mnist = input_data.read_data_sets("MNIST_data", one_hot=True)
+
+    for i in range(20000):
+        # 每个批次50个数据
+        batch = mnist.train.next_batch(50)
+
+        x_image = tf.reshape(batch[0], [-1, 28, 28, 1])
+        y_label = tf.argmax(batch[1], 1)
+
+        logits = cnn_model(x_image, keep_prob=keep_prob, first_w="w_conv1_mnist")
+        loss = get_loss(logits, y_label)
+        train_step = training(loss)
+        acc = get_accuracy(logits, y_label)
+
+        if i % 100 == 0:
+            # 每训练100次，评估一次，使用训练数据
+            print("step %d: accuracy= %g" % (i, acc.eval()))
+
+    print("MINST test accuracy %g" %
+          acc.eval())
+    session.close()
 
 
 def get_files(file_dir):
@@ -200,5 +235,23 @@ def get_batches(image, label, resize_w, resize_h, batch_size, capacity):
     print(image_batch)
     return images_batch, labels_batch
 
+# 保存训练模型参数
+def save():
+    saver = tf.train.Saver()
+    saver.save(session, save_path)
 
-run_training()
+# 恢复模型参数
+def restore():
+    saver = tf.train.Saver()
+    saver.restore(session, save_path)
+
+
+save_path = "model_save/cnn.ckpt"
+
+init = tf.global_variables_initializer()
+session.run(init)
+
+
+# 会关闭 session
+#run_training_with_my_data(2, 0.5)
+run_training_with_mnist(0.5)

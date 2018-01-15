@@ -2,6 +2,7 @@
 .idea/
 .MNIST_data
 .model_save
+.__pycache__
 
 
 *.ini
