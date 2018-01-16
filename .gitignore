@@ -6,3 +6,9 @@
 
 
 *.ini
+.idea/inspectionProfiles/Project_Default.xml
+.idea/modules.xml
+__pycache__/input_data.cpython-35.pyc
+.idea/vcs.xml
+.idea/inspectionProfiles/Project_Default.xml
+__pycache__/input_data.cpython-35.pyc

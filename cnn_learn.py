@@ -5,13 +5,78 @@ import input_data
 
 session = tf.InteractiveSession()
 
+# MNIST 数据占位符
+img_mnist_h = tf.placeholder("float", [None, 784])
+lab_mnist_h = tf.placeholder("float", [None, 10])
+
+keep_prob_h = tf.placeholder("float")
+
+def get_files(file_dir):
+    """
+    :param filename: 文件夹名/
+    :return: 包含文件名，标签名的列表
+    """
+    class_list = []
+    label_list = []
+    for train_class in os.listdir(file_dir):
+        for pic in os.listdir(file_dir + train_class):
+            class_list.append(file_dir + train_class+'/'+pic)
+            label_list.append(train_class)
+    temp = np.array([class_list, label_list])
+    temp = temp.transpose()
+    # shuffle the samples
+    np.random.shuffle(temp)
+    # after transpose, images is in dimension 0 and label in dimension 1
+    image_list = list(temp[:, 0])
+    label_list = list(temp[:, 1])
+    label_list = [int(i) for i in label_list]
+    print("读取到的数字：")
+    print(label_list)
+    return image_list, label_list
+
+
+def get_batches(image, label, resize_w, resize_h, batch_size, capacity):
+    """
+    获取批次
+    :param image: 图片列表
+    :param label: 标签列表
+    :param resize_w: 宽
+    :param resize_h: 高
+    :param batch_size: 批次大小
+    :param capacity:
+    :return: 图片，列表批次
+    """
+    # convert the list of images and labels to tensor
+    image = tf.cast(image, tf.string)
+    label = tf.cast(label, tf.int64)
+    queue = tf.train.slice_input_producer([image, label])
+    label = queue[1]
+    # 读取图片
+    image_c = tf.read_file(queue[0])
+    image = tf.image.decode_jpeg(image_c, channels=3)
+    # resize
+    image = tf.image.resize_image_with_crop_or_pad(image, resize_w, resize_h)
+    # (x - mean) / adjusted_stddev 标准化像素深度
+    image = tf.image.per_image_standardization(image)
+
+    image_batch, label_batch = tf.train.batch([image, label],
+                                              batch_size=batch_size,
+                                              num_threads=64,
+                                              capacity=capacity)
+    images_batch = tf.cast(image_batch, tf.float32)
+    labels_batch = tf.reshape(label_batch, [batch_size])
+
+    return images_batch, labels_batch
+
+
 def weight_variable(shape, dtype):
     """
     给权值赋值，从正态分布片段中取值，标准差：0.01
+    :param dtype: 数据类型
     :param shape: 卷积核属性
     :return:
     """
-    initial = tf.truncated_normal(shape=shape, stddev=0.1, dtype=dtype)
+    initial = tf.truncated_normal(shape=shape, stddev=0.01, dtype=dtype)
     return tf.Variable(initial)
 
 
@@ -122,12 +187,11 @@ def training(loss):
     return train_step
 
 
-def run_training_with_my_data(setp_num, keep_prob):
-
+def run_training_with_my_data(step_num, keep_prob):
     file_dir = 'local_data/'
     image, label = get_files(file_dir)
     image_batches, label_batches = get_batches(image, label,
-                                               resize_w=28, resize_h=28, batch_size=10, capacity=20)
+                                               resize_w=28, resize_h=28, batch_size=2, capacity=20)
 
     logits = cnn_model(image_batches, keep_prob=keep_prob, first_w="w_conv1")
     loss = get_loss(logits, label_batches)
@@ -135,11 +199,14 @@ def run_training_with_my_data(setp_num, keep_prob):
     train_step = training(loss)
     acc = get_accuracy(logits, label_batches)
 
+    init = tf.global_variables_initializer()
+    session.run(init)
+
     coord = tf.train.Coordinator()
     threads = tf.train.start_queue_runners(sess=session, coord=coord)
 
     try:
-        for step in np.arange(setp_num):
+        for step in np.arange(step_num):
             print("run_training: step %d" % step)
             if coord.should_stop():
                 break
@@ -150,95 +217,41 @@ def run_training_with_my_data(setp_num, keep_prob):
     finally:
         coord.request_stop()
     coord.join(threads)
-    session.close()
 
 
 def run_training_with_mnist(keep_prob):
     # mnist 数据集
     mnist = input_data.read_data_sets("MNIST_data", one_hot=True)
 
+    x_image = tf.reshape(img_mnist_h, [-1, 28, 28, 1])
+    y_label = tf.argmax(lab_mnist_h, 1)
+
+    logits = cnn_model(x_image, keep_prob=keep_prob, first_w="w_conv1_mnist")
+    loss = get_loss(logits, y_label)
+    train_step = training(loss)
+    acc = get_accuracy(logits, y_label)
+
+    init = tf.global_variables_initializer()
+    session.run(init)
+
     for i in range(20000):
         # 每个批次50个数据
         batch = mnist.train.next_batch(50)
 
-        x_image = tf.reshape(batch[0], [-1, 28, 28, 1])
-        y_label = tf.argmax(batch[1], 1)
-
-        logits = cnn_model(x_image, keep_prob=keep_prob, first_w="w_conv1_mnist")
-        loss = get_loss(logits, y_label)
-        train_step = training(loss)
-        acc = get_accuracy(logits, y_label)
-
+        train_step.run(feed_dict={img_mnist_h: batch[0], lab_mnist_h: batch[1]})
         if i % 100 == 0:
             # 每训练100次，评估一次，使用训练数据
-            print("step %d: accuracy= %g" % (i, acc.eval()))
+            print("step %d: accuracy= %g" % (i, acc.eval(feed_dict={img_mnist_h: batch[0], lab_mnist_h: batch[1]})))
 
     print("MINST test accuracy %g" %
-          acc.eval())
-    session.close()
+          acc.eval(feed_dict={img_mnist_h: batch[0], lab_mnist_h: batch[1]}))
 
-
-def get_files(file_dir):
-    """
-    :param filename: 文件夹名/
-    :return: 包含文件名，标签名的列表
-    """
-    class_list = []
-    label_list = []
-    for train_class in os.listdir(file_dir):
-        for pic in os.listdir(file_dir + train_class):
-            class_list.append(file_dir + train_class+'/'+pic)
-            label_list.append(train_class)
-    temp = np.array([class_list, label_list])
-    temp = temp.transpose()
-    # shuffle the samples
-    np.random.shuffle(temp)
-    # after transpose, images is in dimension 0 and label in dimension 1
-    image_list = list(temp[:, 0])
-    label_list = list(temp[:, 1])
-    label_list = [int(i) for i in label_list]
-    print(label_list)
-    return image_list, label_list
-
-
-def get_batches(image, label, resize_w, resize_h, batch_size, capacity):
-    """
-    获取批次
-    :param image: 图片列表
-    :param label: 标签列表
-    :param resize_w: 宽
-    :param resize_h: 高
-    :param batch_size: 批次大小
-    :param capacity:
-    :return: 图片，列表批次
-    """
-    # convert the list of images and labels to tensor
-    image = tf.cast(image, tf.string)
-    label = tf.cast(label, tf.int64)
-    queue = tf.train.slice_input_producer([image, label])
-    label = queue[1]
-    # 读取图片
-    image_c = tf.read_file(queue[0])
-    image = tf.image.decode_jpeg(image_c, channels=3)
-    # resize
-    image = tf.image.resize_image_with_crop_or_pad(image, resize_w, resize_h)
-    # (x - mean) / adjusted_stddev 标准化像素深度
-    image = tf.image.per_image_standardization(image)
-
-    image_batch, label_batch = tf.train.batch([image, label],
-                                              batch_size=batch_size,
-                                              num_threads=64,
-                                              capacity=capacity)
-    images_batch = tf.cast(image_batch, tf.float32)
-    labels_batch = tf.reshape(label_batch, [batch_size])
-
-    print(image_batch)
-    return images_batch, labels_batch
 
 # 保存训练模型参数
 def save():
     saver = tf.train.Saver()
     saver.save(session, save_path)
+
 
 # 恢复模型参数
 def restore():
@@ -248,10 +261,17 @@ def restore():
 
 save_path = "model_save/cnn.ckpt"
 
-init = tf.global_variables_initializer()
-session.run(init)
+restore()
 
-
-# 会关闭 session
-#run_training_with_my_data(2, 0.5)
-run_training_with_mnist(0.5)
+print("determine which data to training with:\n 1 - mnist\n 2 - local data\n else - close")
+choose_code = input(" input the code to choose:\n")
+if int(choose_code) == 1:
+    run_training_with_mnist(0.5)
+    save()
+    session.close()
+if int(choose_code) == 2:
+    run_training_with_my_data(5, 0.5)
+    save()
+    session.close()
+else:
+    session.close()
