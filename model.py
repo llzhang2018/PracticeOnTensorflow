@@ -57,8 +57,8 @@ class ModelOfCNN(object):
                               strides=[1, 2, 2, 1], padding="SAME")
 
     # 局部归一化
-    def norm(self, x, lsize=4):
-        return tf.nn.lrn(x, depth_radius=lsize, bias=1, alpha=0.001 / 9.0, beta=0.75)
+    # def norm(self, x, lsize=4):
+    #     return tf.nn.lrn(x, depth_radius=lsize, bias=1, alpha=0.001 / 9.0, beta=0.75)
 
     def output_cnn(self, images, keep_prob):
         """
@@ -69,15 +69,15 @@ class ModelOfCNN(object):
         # 第一层
         hidden_conv1 = self.conv2d(images, self.weights["w_conv1"], self.biases["b_conv1"])
         hidden_pool1 = self.pooling(hidden_conv1)
-        hidden_norm1 = self.norm(hidden_pool1)
+        # hidden_norm1 = self.norm(hidden_pool1)
 
         # 第二层
-        hidden_conv2 = self.conv2d(hidden_norm1, self.weights["w_conv2"], self.biases["b_conv2"])
+        hidden_conv2 = self.conv2d(hidden_pool1, self.weights["w_conv2"], self.biases["b_conv2"])
         hidden_pool2 = self.pooling(hidden_conv2)
-        hidden_norm2 = self.norm(hidden_pool2)
+        # hidden_norm2 = self.norm(hidden_pool2)
 
         # 密集连接层
-        hidden_pool2_flat = tf.reshape(hidden_norm2, [-1, self.weights["w_fc1"].get_shape().as_list()[0]])
+        hidden_pool2_flat = tf.reshape(hidden_pool2, [-1, self.weights["w_fc1"].get_shape().as_list()[0]])
         hidden_fc1 = tf.nn.relu(tf.matmul(hidden_pool2_flat, self.weights["w_fc1"]) + self.biases["b_fc1"])
         # 使用 Dropout 优化方法：用一个伯努利序列(0,1随机分布) * 神经元，随机选择每一次迭代的神经元
         hidden_fc1_dropout = tf.nn.dropout(hidden_fc1, keep_prob=keep_prob)
@@ -85,3 +85,8 @@ class ModelOfCNN(object):
         # 输出层，没有做 softmax 回归
         logits = tf.add(tf.matmul(hidden_fc1_dropout, self.weights["w_fc2"]), self.biases["b_fc2"])
         return logits
+
+    @staticmethod
+    def output_w_b(self):
+        print(self.weights)
+        print(self.biases)

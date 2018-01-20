@@ -7,22 +7,25 @@ import os
 
 
 class InputLocalData(object):
-    file_dir = "the local address of img"
+    file_dir = 'the local address of img folders'
 
-    image_list = list
-    label_list = list
+    image_list = []
+    label_list = []
     pass
 
     def __init__(self, file_dir):
         self.file_dir = file_dir
+        # get the data set into image_list and label_list
+        self.get_files()
     pass
 
     def get_files(self):
         """
-        scan the local file_dir to make image_list and label_list
+        scan the local file_dir to assemble image_list and label_list
         """
         class_list = []
         label_list = []
+
         for train_class in os.listdir(self.file_dir):
             for pic in os.listdir(self.file_dir + train_class):
                 class_list.append(self.file_dir + train_class + '/' + pic)
@@ -34,9 +37,10 @@ class InputLocalData(object):
         # after transpose, images is in dimension 0 and label in dimension 1
         self.image_list = list(temp[:, 0])
         self.label_list = list(temp[:, 1])
-        self.label_list = [int(i) for i in label_list]
+
+        self.label_list = [int(i) for i in self.label_list]
         print("get the following numbers ：")
-        print(label_list)
+        print(self.label_list)
         # return image_list, label_list
     pass
 
@@ -58,7 +62,7 @@ class InputLocalData(object):
         # read img from file
         image_c = tf.read_file(queue[0])
         # png
-        image = tf.image.decode_png(image_c, channels=3)
+        image = tf.image.decode_jpeg(image_c, channels=3)
         # resize to resize_w * resize_h
         image = tf.image.resize_image_with_crop_or_pad(image, resize_w, resize_h)
         # (x - mean) / adjusted_stddev
@@ -69,6 +73,7 @@ class InputLocalData(object):
                                                   batch_size=batch_size,
                                                   num_threads=64,
                                                   capacity=capacity)
+
         images_batch = tf.cast(image_batch, tf.float32)
         labels_batch = tf.reshape(label_batch, [batch_size])
 

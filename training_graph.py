@@ -8,8 +8,8 @@ import tensorflow as tf
 
 class TrainingGraph(object):
     # placeholder for local data
-    img_local_h = tf.placeholder("float", [None, 28, 28])
-    lab_local_h = tf.placeholder("float", [None, 1])
+    # img_local_h = tf.placeholder("float32", [None, 28, 28, 3])
+    # lab_local_h = tf.placeholder("int32", [None])
     # channel of img ,  the value is 3 for RGB, 1 for gray
     channels = 3
     # keep_prob of dropout in model
@@ -19,9 +19,11 @@ class TrainingGraph(object):
     def __init__(self, channels, keep_prob):
         self.channels = channels
         self.keep_prob = keep_prob
+
+        # self.img_local_h = tf.reshape(self.img_local_h, [-1, 28, 28, channels])
         pass
 
-    def get_loss(self, logits):
+    def get_loss(self, logits, labels):
         """
         finish softmax
         :param logits: a tensor  of shape [batch_size, NUM_CLASSES]
@@ -32,11 +34,12 @@ class TrainingGraph(object):
             cross_entropy
         go to https://www.jianshu.com/p/fb119d0ff6a6 learn more
         """
-        cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=self.lab_local_h)
+        cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=logits)
+        # cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=labels)
         loss = tf.reduce_mean(cross_entropy)
         return loss
 
-    def build_graph(self):
+    def build_graph_with_batch(self, img_batch, lab_batch):
         """
         logits: a tensor  of shape [batch_size, NUM_CLASSES]
         labels: a tensor of shape [batch_size]
@@ -44,13 +47,13 @@ class TrainingGraph(object):
         """
         # calculate the loss from model output
         cnn_model = model.ModelOfCNN(channels=self.channels)
-        logits = cnn_model.output_cnn(images=self.img_local_h, keep_prob=self.keep_prob)
-        loss = self.get_loss(logits)
+        logits = cnn_model.output_cnn(img_batch, keep_prob=self.keep_prob)
+        loss = self.get_loss(logits=logits, labels=lab_batch)
         # build a train graph
         train_step = tf.train.AdamOptimizer(1e-4).minimize(loss)
         # build a accuracy graph
-        accuracy = tf.nn.in_top_k(logits, self.lab_local_h, 1)
-        accuracy = tf.cast(accuracy, tf.float32)
+        accuracy = tf.nn.in_top_k(logits, lab_batch, 1)
+        accuracy = tf.cast(accuracy, tf.float16)
         accuracy = tf.reduce_mean(accuracy)
 
         return train_step, accuracy
