@@ -11,14 +11,14 @@ class ModelOfCNN(object):
     pass
 
     # Channels of img, default channels = 3, img in RGB
-    def __init__(self, channels=3):
+    def __init__(self, channels=3, classNum = 10):
 
         # define weights's shape
         self.weights = {
             "w_conv1": self.weight_variable([5, 5, channels, 32]),
             "w_conv2": self.weight_variable([5, 5, 32, 64]),
             "w_fc1": self.weight_variable([7 * 7 * 64, 1024]),
-            "w_fc2": self.weight_variable([1024, 10])
+            "w_fc2": self.weight_variable([1024, classNum])
         }
 
         # define biases's shape
@@ -26,7 +26,7 @@ class ModelOfCNN(object):
             "b_conv1": self.bias_variable([32]),
             "b_conv2": self.bias_variable([64]),
             "b_fc1": self.bias_variable([1024]),
-            "b_fc2": self.bias_variable([10])
+            "b_fc2": self.bias_variable([classNum])
         }
     pass
 
@@ -62,7 +62,8 @@ class ModelOfCNN(object):
         """
         model of CNN
         :param images: input
-        :return: a tensor  of shape [batch_size, NUM_CLASSES]
+        :param keep_prob: Drop probability of fully connected layers
+        :return a tensor  of shape [batch_size, NUM_CLASSES]
         """
         # convolution layer 1
         hidden_conv1 = self.conv2d(images, self.weights["w_conv1"], self.biases["b_conv1"])
@@ -77,6 +78,7 @@ class ModelOfCNN(object):
         # connections
         hidden_pool2_flat = tf.reshape(hidden_pool2, [-1, self.weights["w_fc1"].get_shape().as_list()[0]])
         hidden_fc1 = tf.nn.relu(tf.matmul(hidden_pool2_flat, self.weights["w_fc1"]) + self.biases["b_fc1"])
+
         # Dropout
         hidden_fc1_dropout = tf.nn.dropout(hidden_fc1, keep_prob=keep_prob)
 

@@ -23,14 +23,14 @@ class InputLocalData(object):
         """
         scan the local file_dir to assemble image_list and label_list
         """
-        class_list = []
+        img_list = []
         label_list = []
 
         for train_class in os.listdir(self.file_dir):
             for pic in os.listdir(self.file_dir + train_class):
-                class_list.append(self.file_dir + train_class + '/' + pic)
+                img_list.append(self.file_dir + train_class + '/' + pic)
                 label_list.append(train_class)
-        temp = np.array([class_list, label_list])
+        temp = np.array([img_list, label_list])
         temp = temp.transpose()
         # shuffle the samples
         np.random.shuffle(temp)

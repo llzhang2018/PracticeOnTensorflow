@@ -1,3 +1,4 @@
+# encoding: utf-8
 """
 主函数
 """
@@ -17,7 +18,7 @@ input_data = ild.InputLocalData('local_data/')
 img_batch, lab_batch = input_data.get_batches(resize_w=28, resize_h=28,
                                               batch_size=5, capacity=20)
 
-graph = tg.TrainingGraph(channels=3, keep_prob=1)
+graph = tg.TrainingGraph(channels=3, keep_prob=1, classNum=10)
 train_step, acc = graph.build_graph_with_batch(img_batch, lab_batch)
 
 # --------------------------------- build a graph -- end -------------------------------
