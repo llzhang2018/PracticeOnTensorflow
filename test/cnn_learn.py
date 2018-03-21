@@ -1,12 +1,10 @@
+# encoding: utf-8
 import os
 import numpy as np
 import tensorflow as tf
-import input_data
+from test import input_data
 import input_local_data as ild
 
-"""
-本地文件夹路径需要更改
-"""
 
 session = tf.InteractiveSession()
 
@@ -271,7 +269,7 @@ def restore():
 
 save_path = "model_save/cnn.ckpt"
 
-restore()
+# restore()
 
 print("determine which data to training with:\n 1 - mnist\n 2 - local data\n else - close")
 choose_code = input(" input the code to choose:\n")

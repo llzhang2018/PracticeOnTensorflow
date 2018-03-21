@@ -1,4 +1,4 @@
-import input_data
+from test import input_data
 import tensorflow as tf
 import numpy as np
 from PIL import Image
@@ -175,10 +175,10 @@ def useMyPicture():
 save_path = "model_save/cnn.ckpt"
 
 # 运行
-# train()
+train()
 # save()
 
-restore()
+# restore()
 
-useMyPicture()
+# useMyPicture()
 session.close()
